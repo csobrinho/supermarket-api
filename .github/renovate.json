@@ -1,0 +1,10 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "assignees": ["csobrinho"],
+  "automerge": true,
+  "ignoreTests": true,
+  "major": {
+    "automerge": false
+  }
+}

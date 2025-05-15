@@ -169,5 +169,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.Infof("main: done")
+	logger.Infof("main: all done ✅")
 }

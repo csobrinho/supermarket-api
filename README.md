@@ -24,5 +24,5 @@ INFO : 2025/05/15 13:43:55.915203 main.go:113: main: clip stats:
     - deleted: 0
     - ignored: 0
     - errors:  0
-INFO : 2025/05/15 13:43:55.915206 main.go:172: main: done
+INFO : 2025/05/15 13:43:55.915206 main.go:172: main: all done ✅
 ```
