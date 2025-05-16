@@ -12,20 +12,20 @@ var _ supermarket.Supermarket = (*safeway)(nil)
 var _ promotion.Service = (*promotionService)(nil)
 
 func Creator(ctx context.Context, cfg *supermarket.Config) (supermarket.Supermarket, error) {
-	a := NewAuthenticator(ctx, cfg)
-	return &safeway{
-		as: a,
-		ps: &promotionService{
-			client:  a.HttpClient(),
-			apiKey:  cfg.ApiKey,
-			storeID: cfg.StoreID},
-	}, nil
+	a, err := NewAuthenticator(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	ps, err := NewPromotion(ctx, cfg, a.ts)
+	if err != nil {
+		return nil, err
+	}
+	return &safeway{as: a, ps: ps}, nil
 }
 
 type safeway struct {
-	cfg *supermarket.Config
-	as  *authenticatorService
-	ps  *promotionService
+	as *authenticatorService
+	ps *promotionService
 }
 
 func (s *safeway) Authenticator() (auth.Service, error)  { return s.as, nil }

@@ -131,10 +131,6 @@ func run(ctx context.Context) error {
 			stats.deleted++
 			continue
 		}
-		if !cd.IsDeleted {
-			stats.deleted++
-			continue
-		}
 		if stats.log {
 			logger.Infof("main: clipping all promotions...")
 			stats.log = false

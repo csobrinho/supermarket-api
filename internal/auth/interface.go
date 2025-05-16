@@ -2,14 +2,13 @@ package auth
 
 import (
 	"context"
-	"net/http"
 
 	"golang.org/x/oauth2"
 )
 
 // Service provides methods for authentication and user management.
 type Service interface {
-	HttpClient() *http.Client
+	TokenSource() oauth2.TokenSource
 
 	// RefreshToken refreshes the access token using the refresh token.
 	RefreshToken(ctx context.Context) (*oauth2.Token, error)

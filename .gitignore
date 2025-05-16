@@ -26,4 +26,4 @@ go.work.sum
 
 # Build directories.
 build/
-env.sh
+.env

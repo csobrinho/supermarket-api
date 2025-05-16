@@ -3,7 +3,7 @@ package safeway
 import (
 	"context"
 	"flag"
-	"maps"
+	"fmt"
 	"net/http"
 
 	"github.com/csobrinho/supermarket-api/internal/auth"
@@ -26,20 +26,10 @@ var (
 		supermarket.LookupEnv("SAFEWAY_TOKEN_URL", "https://albertsons.okta.com/oauth2/ausp6soxrIyPrm8rS2p6/v1/token"),
 		"Safeway token url. Can also be provided via 'SAFEWAY_TOKEN_URL' env.")
 
-	oauthScopes       = []string{"openid", "profile", "offline_access", "partner"}
-	oauthExtraHeaders = map[string]string{
-		"banner":                 "safeway",
-		"platform":               "Android",
-		"x-swy-application-type": "native-mobile",
-		"x-swy_api_key":          "appandroid",
-		"x-swy_version":          "1.1",
-		"x-swy_banner":           "safeway",
-		// "appversion":          "2025.\d+.\d+",
-		// "storeid":             "\d+",
-	}
+	oauthScopes = []string{"openid", "profile", "offline_access", "partner"}
 )
 
-func NewAuthenticator(ctx context.Context, cfg *supermarket.Config) *authenticatorService {
+func NewAuthenticator(ctx context.Context, cfg *supermarket.Config) (*authenticatorService, error) {
 	config := &oauth2.Config{
 		ClientID: cfg.ClientID,
 		Endpoint: oauth2.Endpoint{
@@ -55,28 +45,14 @@ func NewAuthenticator(ctx context.Context, cfg *supermarket.Config) *authenticat
 	// Note: The original request also sends the scopes in the refresh token request.
 	ts := config.TokenSource(ctx, token)
 
-	headers := maps.Clone(oauthExtraHeaders)
-	headers["storeid"] = cfg.StoreID
-	headers["appversion"] = cfg.AppVersion
-
-	t := http.DefaultTransport
-	if cfg.Debug {
-		t = &ihttp.LoggingTransport{Next: http.DefaultTransport}
+	client, err := ihttp.New(true, cfg.Debug, cfg.UserAgent, nil, cfg.Timeout, nil)
+	if err != nil {
+		return nil, fmt.Errorf("authenticator: new http client, error %w", err)
 	}
-	t = &ihttp.CustomTransport{
-		Next:         t,
-		UserAgent:    cfg.UserAgent,
-		ExtraHeaders: headers,
-	}
-	base := &http.Client{
-		Timeout:   cfg.Timeout,
-		Transport: t,
-	}
-
 	return &authenticatorService{
-		client: oauth2.NewClient(context.WithValue(ctx, oauth2.HTTPClient, base), ts),
+		client: oauth2.NewClient(context.WithValue(ctx, oauth2.HTTPClient, client), ts),
 		ts:     ts,
-	}
+	}, nil
 }
 
 func (as *authenticatorService) RefreshToken(ctx context.Context) (*oauth2.Token, error) {
@@ -84,7 +60,7 @@ func (as *authenticatorService) RefreshToken(ctx context.Context) (*oauth2.Token
 	as.authenticated = err == nil
 	return t, err
 }
-func (as *authenticatorService) HttpClient() *http.Client { return as.client }
+func (as *authenticatorService) TokenSource() oauth2.TokenSource { return as.ts }
 func (as *authenticatorService) IsAuthenticated(ctx context.Context) bool {
 	if !as.authenticated {
 		return false

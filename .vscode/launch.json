@@ -10,6 +10,7 @@
             "request": "launch",
             "mode": "debug",
             "program": "cmd/supermarket/main.go",
+            "envFile": "${workspaceFolder}/.env",
         },
     ]
 }

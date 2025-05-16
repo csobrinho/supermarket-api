@@ -45,11 +45,13 @@ func (emt EpochMillisTime) String() string {
 
 // GetClipDealsResponse is the top-level structure for the deals response.
 type GetClipDealsResponse struct {
-	All []Promotion `json:"cc"`
+	Coupons           []Promotion `json:"cc,omitempty"`
+	PersonalizedDeals []Promotion `json:"pd,omitempty"`
 }
 
 // Promotion represents an individual promotion item.
 type Promotion struct {
+	AllocationID        string             `json:"allocationId,omitempty"` //
 	Brand               string             `json:"brand"`                  // Maps to: Brand
 	Category            string             `json:"category"`               // Maps to: Category
 	ClipID              string             `json:"clipId"`                 // Maps to: ID
@@ -64,14 +66,16 @@ type Promotion struct {
 	MinPurchaseQuantity int                `json:"minPurchaseQty"`         // Maps to: MinPurchaseQuantity
 	MaxPurchaseQuantity int                `json:"maxPurchaseQty"`         // Maps to: MaxPurchaseQuantity
 	Price               float64            `json:"price"`                  // Maps to: Price
+	RegularPrice        string             `json:"regularPrice,omitempty"` //
 	OfferID             string             `json:"offerId"`                // Maps to: PromoCode
 	OfferPgm            string             `json:"offerPgm"`               // Maps to: PromoType
 	OfferProgramType    string             `json:"offerProgramType"`       // Maps to: ProgramType
+	ProgramType         string             `json:"programType,omitempty"`  //
 	OfferProtoType      string             `json:"offerProtoType"`         //
-	OfferSubPgm         string             `json:"offerSubPgm"`            //
+	OfferSubPgm         string             `json:"offerSubPgm,omitempty"`  //
 	PurchaseIndex       string             `json:"purchaseInd"`            //
 	PurchaseRank        string             `json:"purchaseRank"`           //
-	Status              string             `json:"status"`                 // Maps to: Status
+	Status              clipStatusType     `json:"status"`                 // Maps to: Status
 	UsageType           string             `json:"usageType"`              // Maps to: UsageType
 	StartDate           EpochMillisTime    `json:"startDate"`              // Maps to: StartDate
 	EndDate             EpochMillisTime    `json:"endDate"`                // Maps to: EndDate
@@ -119,7 +123,7 @@ func (p Promotion) convert() promotion.ClipDeal {
 			PromoCode:           &p.OfferID,
 			PromoType:           &p.OfferPgm,
 			ProgramType:         &p.OfferProgramType,
-			Status:              p.Status,
+			Status:              string(p.Status),
 			UsageType:           p.UsageType,
 			StartDate:           time.Time(p.StartDate),
 			EndDate:             time.Time(p.EndDate),
@@ -158,3 +162,53 @@ type ClipDeal struct {
 	ClipTs   string `json:"clipTs,omitempty"`
 	Checked  bool   `json:"checked,omitempty"`
 }
+
+type couponType string
+
+const (
+	COUPON_TYPE_PERSONALIZED_DEAL couponType = "PD"
+	COUPON_TYPE_COUPON_MF         couponType = "MF"
+	COUPON_TYPE_COUPON_SC         couponType = "SC"
+	COUPON_TYPE_COUPON_CC         couponType = "CC"
+	COUPON_TYPE_GROCERY_REWARD    couponType = "GR"
+	COUPON_TYPE_MONOPOLY_PRIZE    couponType = "TR"
+	COUPON_TYPE_WEEKLY_AD         couponType = "WS"
+)
+
+type filterCouponType string
+
+const (
+	FILTER_COUPON_TYPE_PERSONALIZED_DEAL filterCouponType = "PD"
+	FILTER_COUPON_TYPE_COUPON_MF         filterCouponType = "MF"
+	FILTER_COUPON_TYPE_COUPON_SC         filterCouponType = "SC"
+	FILTER_COUPON_TYPE_COUPON_CC         filterCouponType = "CC"
+	FILTER_COUPON_TYPE_COUPON_MC         filterCouponType = "manufacturerCoupons"
+)
+
+type couponActionType string
+
+const (
+	COUPON_ACTION_TYPE_CLIP                couponActionType = "CL"
+	COUPON_ACTION_TYPE_CLIPPED             couponActionType = "CLD"
+	COUPON_ACTION_TYPE_ADD                 couponActionType = "AC"
+	COUPON_ACTION_TYPE_ADDED               couponActionType = "ADC"
+	COUPON_ACTION_TYPE_CLIP_COUPON         couponActionType = "CLC"
+	COUPON_ACTION_TYPE_CLIP_OFFER          couponActionType = "CLCUDC"
+	COUPON_ACTION_TYPE_ACTIVATE            couponActionType = "SCC"
+	COUPON_ACTION_TYPE_BONUS_PATH_COMPLETE couponActionType = "CC"
+)
+
+type offerType string
+
+const (
+	OFFER_TYPE_UNLIMITED_USE  offerType = "U"
+	OFFER_TYPE_ONE_TIME_USE_O offerType = "O"
+	OFFER_TYPE_ONE_TIME_USE_M offerType = "M"
+)
+
+type clipStatusType string
+
+const (
+	CLIP_STATUS_TYPE_CLIPPED   clipStatusType = "C"
+	CLIP_STATUS_TYPE_UNCLIPPED clipStatusType = "U"
+)

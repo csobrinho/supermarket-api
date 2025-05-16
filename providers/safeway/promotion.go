@@ -8,9 +8,12 @@ import (
 	"net/http"
 	"slices"
 
+	ihttp "github.com/csobrinho/supermarket-api/internal/http"
 	"github.com/csobrinho/supermarket-api/internal/promotion"
+	"github.com/csobrinho/supermarket-api/pkg/supermarket"
 	"github.com/google/logger"
 	"golang.org/x/exp/maps"
+	"golang.org/x/oauth2"
 )
 
 const (
@@ -19,21 +22,32 @@ const (
 )
 
 var promotionsExtraHeaders = map[string]string{
-	"content-type":  "application/json",
 	"accept":        "application/json",
+	"content-type":  "application/json",
 	"platform":      "android",
-	"x-swy_version": "2.1",
 	"x-swy_banner":  "safeway",
-	// "appversion":    "2025.\d+.\d+",
-	// "storeid":       "\d+",
+	"x-swy_version": "2.1",
+	// "appversion": "2025.\d+.\d+",
+	// "storeid": "\d+",
 	// "x-swy_api_key": "...",
+	// "user-agent": "okhttp/4.12.0",
 }
 
 type promotionService struct {
-	client     *http.Client
-	apiKey     string
-	appVersion string
-	storeID    string
+	client  *http.Client
+	storeID string
+}
+
+func NewPromotion(ctx context.Context, cfg *supermarket.Config, ts oauth2.TokenSource) (*promotionService, error) {
+	headers := maps.Clone(promotionsExtraHeaders)
+	headers["storeid"] = cfg.StoreID
+	headers["x-swy_api_key"] = cfg.ApiKey
+	headers["appversion"] = cfg.AppVersion
+	client, err := ihttp.New(true, cfg.Debug, cfg.UserAgent, headers, cfg.Timeout, ts)
+	if err != nil {
+		return nil, fmt.Errorf("promotion: new http client, error %w", err)
+	}
+	return &promotionService{client: client, storeID: cfg.StoreID}, nil
 }
 
 // GetClipDeals retrieves available clip deals.
@@ -42,14 +56,6 @@ func (ps *promotionService) GetClipDeals(ctx context.Context, opts promotion.Pro
 	if err != nil {
 		return nil, fmt.Errorf("promotion: get clip deals request, error %w", err)
 	}
-
-	for k, v := range promotionsExtraHeaders {
-		req.Header.Set(k, v)
-	}
-	req.Header.Set("storeid", ps.storeID)
-	req.Header.Set("x-swy_api_key", ps.apiKey)
-	req.Header.Set("appversion", ps.appVersion)
-
 	res, err := ps.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("promotion: get clip deals response, error %w", err)
@@ -64,21 +70,31 @@ func (ps *promotionService) GetClipDeals(ctx context.Context, opts promotion.Pro
 		return nil, fmt.Errorf("promotion: get clip deals response, error decoding %w", err)
 	}
 
-	logger.Infof("promotion: found %d clip deals", len(root.All))
-	ret := make([]promotion.ClipDeal, 0, len(root.All))
+	logger.Infof("promotion: found %d deals", len(root.Coupons))
+	logger.Infof("promotion: found %d personalized clip deals", len(root.PersonalizedDeals))
+	ret := make([]promotion.ClipDeal, 0, len(root.Coupons)+len(root.PersonalizedDeals))
 
 	status := map[string]int{
-		"C": 0,
-		"U": 0,
+		"clipped":     0,
+		"unclipped":   0,
+		"unclippable": 0,
 	}
-	for _, offer := range root.All {
-		status[offer.Status]++
-		ret = append(ret, offer.convert())
+	m := map[clipStatusType]string{
+		CLIP_STATUS_TYPE_CLIPPED:   "clipped",
+		CLIP_STATUS_TYPE_UNCLIPPED: "unclipped",
+		"":                         "unclippable",
 	}
+	for _, all := range [2][]Promotion{root.Coupons, root.PersonalizedDeals} {
+		for _, offer := range all {
+			status[m[offer.Status]]++
+			ret = append(ret, offer.convert())
+		}
+	}
+
 	keys := maps.Keys(status)
 	slices.Sort(keys)
 	for _, key := range keys {
-		logger.Infof("promotion:   - %s: %d", key, status[key])
+		logger.Infof("promotion:  `- %-11s: %d", key, status[key])
 	}
 	return ret, nil
 }
