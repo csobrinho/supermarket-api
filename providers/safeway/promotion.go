@@ -110,7 +110,7 @@ func (ps *promotionService) ClipDeal(ctx context.Context, cd promotion.ClipDeal)
 	if cd.IsClipped {
 		return fmt.Errorf("promotion[%s]: clip deal already clipped", cd.ID)
 	}
-	if cd.IsClippable {
+	if !cd.IsClippable {
 		return fmt.Errorf("promotion[%s]: clip deal is not clippable", cd.ID)
 	}
 	if cd.IsDeleted {

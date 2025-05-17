@@ -127,7 +127,7 @@ func run(ctx context.Context) error {
 			stats.notclippable++
 			continue
 		}
-		if !cd.IsDeleted {
+		if cd.IsDeleted {
 			stats.deleted++
 			continue
 		}
