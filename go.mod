@@ -4,7 +4,7 @@ go 1.24.3
 
 require (
 	github.com/google/logger v1.1.1
-	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
+	golang.org/x/exp v0.0.0-20250711185948-6ae5c78190dc
 	golang.org/x/net v0.42.0
 	golang.org/x/oauth2 v0.30.0
 )
