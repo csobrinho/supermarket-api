@@ -1,6 +1,6 @@
 module github.com/csobrinho/supermarket-api
 
-go 1.24.3
+go 1.25.4
 
 require (
 	github.com/google/logger v1.1.1

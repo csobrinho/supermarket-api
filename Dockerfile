@@ -1,14 +1,18 @@
 # Build stage.
-FROM golang:alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
 WORKDIR /app
+
+# Cache Go modules.
 COPY go.mod go.sum ./
 RUN go mod download
-COPY . .
-RUN go build -o main cmd/supermarket/*
 
-# Runner stage.
-FROM alpine:latest AS runner
-RUN apk --no-cache add ca-certificates
-WORKDIR /app
-COPY --from=builder /app/main .
-ENTRYPOINT ["./main"]
+# Build for target platform.
+ARG TARGETOS TARGETARCH
+COPY . .
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o main cmd/supermarket/*
+
+# Runner stage - use scratch for minimal image.
+FROM scratch AS runner
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /app/main /main
+ENTRYPOINT ["/main"]
