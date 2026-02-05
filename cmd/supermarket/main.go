@@ -217,7 +217,6 @@ func main() {
 		logger.Infof("main: pushing metrics to %s...", *prometheusPushGateway)
 		if pushErr := metrics.PushMetrics(ctx, *prometheusPushGateway, *prometheusJobName); pushErr != nil {
 			logger.Errorf("main: failed to push metrics: %v", pushErr)
-			metrics.RecordError(metrics.ErrorCategoryMetricsPush)
 		}
 	}
 
