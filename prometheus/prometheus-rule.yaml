@@ -1,0 +1,78 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: supermarket-alerts
+spec:
+  groups:
+    - name: supermarket
+      interval: 30s
+      rules:
+        # Alert when 3+ consecutive failures (warning).
+        - alert: SupermarketMultipleFailures
+          expr: supermarket_consecutive_failures >= 3
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Supermarket has {{ $value }} consecutive failures"
+            description: "The supermarket job has failed {{ $value }} times consecutively."
+
+        # Alert when 6+ consecutive failures (critical).
+        - alert: SupermarketFrequentFailures
+          expr: supermarket_consecutive_failures >= 6
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Supermarket has {{ $value }} consecutive failures"
+            description: "The supermarket job has failed {{ $value }} times consecutively. Immediate attention required."
+
+        # Alert when no successful runs in 48 hours (critical).
+        - alert: SupermarketNoSuccessfulRuns
+          expr: time() - supermarket_last_success_timestamp > 172800 and supermarket_last_run_success == 0
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Supermarket has had no successful runs in 48 hours"
+            description: "The supermarket job has not completed successfully in over 48 hours."
+
+        # Alert when job hasn't run at all in 25 hours (critical - likely CronJob issue).
+        - alert: SupermarketJobStalled
+          expr: time() - supermarket_last_run_timestamp > 90000
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Supermarket job appears stalled"
+            description: "The supermarket CronJob hasn't executed at all in the last 25 hours. Expected runs once daily."
+
+        # Alert on high token refresh error rate (3+ in 7 days).
+        - alert: SupermarketTokenRefreshIssues
+          expr: changes(supermarket_last_error_timestamp{category="token_refresh"}[7d]) >= 3
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Supermarket experiencing token refresh issues"
+            description: "Token refresh has failed {{ $value }} times in the last 7 days. Credentials may need verification."
+
+        # Alert on high promotions fetch error rate (3+ in 7 days).
+        - alert: SupermarketPromotionsFetchIssues
+          expr: changes(supermarket_last_error_timestamp{category="promotions_fetch"}[7d]) >= 3
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Supermarket experiencing promotions fetch issues"
+            description: "Promotions fetch has failed {{ $value }} times in the last 7 days. Safeway API may be having issues."
+
+        # Alert on high clip deal error rate (5+ in 7 days).
+        - alert: SupermarketClipDealIssues
+          expr: changes(supermarket_last_error_timestamp{category="clip_deal"}[7d]) >= 5
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Supermarket experiencing clip deal issues"
+            description: "Clip deal operations have failed {{ $value }} times in the last 7 days."
