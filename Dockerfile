@@ -8,8 +8,11 @@ RUN go mod download
 
 # Build for target platform.
 ARG TARGETOS TARGETARCH
+ARG VERSION=dev
 COPY . .
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o main cmd/supermarket/*
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+    -ldflags "-X main.version=${VERSION}" \
+    -o main cmd/supermarket/*
 
 # Runner stage - use scratch for minimal image.
 FROM scratch AS runner

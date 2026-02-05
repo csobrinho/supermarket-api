@@ -7,9 +7,11 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
+	"github.com/csobrinho/supermarket-api/internal/metrics"
 	"github.com/csobrinho/supermarket-api/internal/promotion"
 	"github.com/csobrinho/supermarket-api/pkg/supermarket"
 	"github.com/csobrinho/supermarket-api/providers/safeway"
@@ -17,6 +19,9 @@ import (
 )
 
 var (
+	// version is set at build time via -ldflags.
+	version = "dev"
+
 	refreshToken = flag.String(
 		"refresh_token",
 		supermarket.LookupEnv("REFRESH_TOKEN", ""),
@@ -54,11 +59,24 @@ var (
 		"verbose",
 		supermarket.LookupEnvInt("VERBOSE", 0),
 		"Log verbosity level [0-4]. Can also be provided via 'VERBOSE' env.")
+	prometheusPushGateway = flag.String(
+		"prometheus_push_gateway",
+		supermarket.LookupEnv("PROMETHEUS_PUSH_GATEWAY", ""),
+		"Prometheus Push Gateway endpoint (e.g., http://localhost:9091). Can also be provided via 'PROMETHEUS_PUSH_GATEWAY' env.")
+	prometheusJobName = flag.String(
+		"prometheus_job_name",
+		supermarket.LookupEnv("PROMETHEUS_JOB_NAME", "supermarket"),
+		"Prometheus job name for pushing metrics. Can also be provided via 'PROMETHEUS_JOB_NAME' env.")
 )
 
 func run(ctx context.Context) error {
-	logger.Infof("main: registering safeway...")
 	logger.SetLevel(logger.Level(*verbose))
+
+	// Validate configuration.
+	if *refreshToken == "" || *clientId == "" || *apiKey == "" || *store == "" {
+		metrics.RecordError(metrics.ErrorCategoryConfigValidation)
+		return fmt.Errorf("missing required configuration: refresh_token, client_id, api_key, and store_id are required")
+	}
 
 	factory := supermarket.NewFactory()
 	factory.Register("safeway", safeway.Creator)
@@ -73,29 +91,39 @@ func run(ctx context.Context) error {
 		supermarket.WithStoreID(*store),
 	)
 	if err != nil {
+		metrics.RecordError(metrics.ErrorCategoryConfigValidation)
 		return fmt.Errorf("creating client, %w", err)
 	}
 	a, err := sm.Authenticator()
 	if err != nil {
+		metrics.RecordError(metrics.ErrorCategoryConfigValidation)
 		return fmt.Errorf("creating authenticator, %w", err)
 	}
 
 	logger.Info("main: getting an access token...")
+	start := time.Now()
 	t, err := a.RefreshToken(ctx)
 	if err != nil {
+		metrics.RecordError(metrics.ErrorCategoryTokenRefresh)
 		return fmt.Errorf("refreshing token, %w", err)
 	}
+	metrics.RecordTokenRefreshDuration(time.Since(start))
 	logger.V(1).Infof("main: access token: %+v", t.AccessToken)
 
 	logger.Infof("main: getting all promotions...")
 	ps, err := sm.Promotion()
 	if err != nil {
+		metrics.RecordError(metrics.ErrorCategoryPromotionsParse)
 		return fmt.Errorf("creating promotion service, %w", err)
 	}
+	start = time.Now()
 	cds, err := ps.GetClipDeals(ctx, promotion.PromotionSearchOptions{})
 	if err != nil {
+		metrics.RecordError(metrics.ErrorCategoryPromotionsFetch)
 		return fmt.Errorf("getting promotions, %w", err)
 	}
+	metrics.RecordPromotionsFetchDuration(time.Since(start))
+	metrics.RecordPromotionsCount(len(cds))
 	if !*clipAll {
 		logger.Infof("main: not clipping any promotions...")
 		return nil
@@ -116,6 +144,8 @@ func run(ctx context.Context) error {
     - deleted: %d
     - ignored: %d
     - errors:  %d`, stats.prev, stats.new, stats.deleted, stats.notclippable, stats.err)
+		// Set clip stats metrics.
+		metrics.RecordClipStats(stats.prev, stats.new, stats.deleted, stats.notclippable, stats.err)
 	}()
 
 	for _, cd := range cds {
@@ -135,9 +165,14 @@ func run(ctx context.Context) error {
 			logger.Infof("main: clipping all promotions...")
 			stats.log = false
 		}
+		start := time.Now()
 		if err := ps.ClipDeal(ctx, cd); err != nil {
-			return fmt.Errorf("clipping deal, %w", err)
+			metrics.RecordError(metrics.ErrorCategoryClipDeal)
+			stats.err++
+			logger.Errorf("main: error clipping deal %v, %v", cd, err)
+			continue
 		}
+		metrics.RecordClipDealDuration(time.Since(start))
 		stats.new++
 		rateLimiter.Wait()
 	}
@@ -147,6 +182,9 @@ func run(ctx context.Context) error {
 func main() {
 	logger.Init("supermarket", true, false, io.Discard)
 	flag.Parse()
+
+	// Set build info.
+	metrics.SetBuildInfo(version, runtime.Version())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -160,10 +198,30 @@ func main() {
 		cancel()
 	}()
 
-	if err := run(ctx); err != nil {
+	metrics.RecordRunStart()
+	start := time.Now()
+	err := run(ctx)
+	metrics.RecordExecutionDuration(time.Since(start))
+
+	// Record success or failure.
+	if err != nil {
 		logger.Errorf("main: error, %v", err)
-		os.Exit(1)
+		metrics.RecordFailure()
+	} else {
+		logger.Infof("main: all done ✅")
+		metrics.RecordSuccess()
 	}
 
-	logger.Infof("main: all done ✅")
+	// Push metrics to Prometheus Pushgateway if configured.
+	if *prometheusPushGateway != "" {
+		logger.Infof("main: pushing metrics to %s...", *prometheusPushGateway)
+		if pushErr := metrics.PushMetrics(ctx, *prometheusPushGateway, *prometheusJobName); pushErr != nil {
+			logger.Errorf("main: failed to push metrics: %v", pushErr)
+			metrics.RecordError(metrics.ErrorCategoryMetricsPush)
+		}
+	}
+
+	if err != nil {
+		os.Exit(1)
+	}
 }
