@@ -3,7 +3,7 @@ module github.com/csobrinho/supermarket-api
 go 1.25.4
 
 require (
-	github.com/google/logger v1.1.1
+	github.com/google/logger v1.1.2
 	github.com/prometheus/client_golang v1.23.2
 	golang.org/x/exp v0.0.0-20260212183809-81e46e3db34a
 	golang.org/x/net v0.50.0
