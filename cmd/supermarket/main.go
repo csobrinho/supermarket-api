@@ -22,51 +22,17 @@ var (
 	// version is set at build time via -ldflags.
 	version = "dev"
 
-	refreshToken = flag.String(
-		"refresh_token",
-		supermarket.LookupEnv("REFRESH_TOKEN", ""),
-		"Refresh token for authentication. Can also be provided via 'REFRESH_TOKEN' env.")
-	clientId = flag.String(
-		"client_id_token",
-		supermarket.LookupEnv("CLIENT_ID", ""),
-		"Client ID for authentication. Can also be provided via 'CLIENT_ID' env.")
-	userAgent = flag.String(
-		"user_agent",
-		supermarket.LookupEnv("USER_AGENT", "okhttp/4.12.0"),
-		"User agent for authentication. Can also be provided via 'USER_AGENT' env.")
-	apiKey = flag.String(
-		"api_key",
-		supermarket.LookupEnv("API_KEY", ""),
-		"API key for authentication. Can also be provided via 'API_KEY' env.")
-	store = flag.String(
-		"store_id",
-		supermarket.LookupEnv("STORE_ID", ""),
-		"Store ID to search for promotions. Can also be provided via 'STORE_ID' env.")
-	appVersion = flag.String(
-		"app_version",
-		supermarket.LookupEnv("APP_VERSION", ""),
-		"App version to emulate. Can also be provided via 'APP_VERSION' env.")
-	clipAll = flag.Bool(
-		"clip_all",
-		supermarket.LookupEnvBool("CLIP_ALL", false),
-		"If true, also clip all coupons. Can also be provided via 'CLIP_ALL' env.")
-	delayMs = flag.Int(
-		"delay_ms",
-		supermarket.LookupEnvInt("DELAY_MS", 1000),
-		"If provided, delay in milliseconds between requests. This value will be randomized +/-50%. "+
-			"Can also be provided via 'DELAY_MS' env.")
-	verbose = flag.Int(
-		"verbose",
-		supermarket.LookupEnvInt("VERBOSE", 0),
-		"Log verbosity level [0-4]. Can also be provided via 'VERBOSE' env.")
-	prometheusPushGateway = flag.String(
-		"prometheus_push_gateway",
-		supermarket.LookupEnv("PROMETHEUS_PUSH_GATEWAY", ""),
-		"Prometheus Push Gateway endpoint (e.g., http://localhost:9091). Can also be provided via 'PROMETHEUS_PUSH_GATEWAY' env.")
-	prometheusJobName = flag.String(
-		"prometheus_job_name",
-		supermarket.LookupEnv("PROMETHEUS_JOB_NAME", "supermarket"),
-		"Prometheus job name for pushing metrics. Can also be provided via 'PROMETHEUS_JOB_NAME' env.")
+	refreshToken       = flag.String("refresh_token", supermarket.LookupEnv("REFRESH_TOKEN", ""), "Refresh token for authentication. Can also be provided via 'REFRESH_TOKEN' env.")
+	clientId           = flag.String("client_id_token", supermarket.LookupEnv("CLIENT_ID", ""), "Client ID for authentication. Can also be provided via 'CLIENT_ID' env.")
+	userAgent          = flag.String("user_agent", supermarket.LookupEnv("USER_AGENT", "okhttp/4.12.0"), "User agent for authentication. Can also be provided via 'USER_AGENT' env.")
+	apiKey             = flag.String("api_key", supermarket.LookupEnv("API_KEY", ""), "API key for authentication. Can also be provided via 'API_KEY' env.")
+	store              = flag.String("store_id", supermarket.LookupEnv("STORE_ID", ""), "Store ID to search for promotions. Can also be provided via 'STORE_ID' env.")
+	appVersion         = flag.String("app_version", supermarket.LookupEnv("APP_VERSION", ""), "App version to emulate. Can also be provided via 'APP_VERSION' env.")
+	clipAll            = flag.Bool("clip_all", supermarket.LookupEnvBool("CLIP_ALL", false), "If true, also clip all coupons. Can also be provided via 'CLIP_ALL' env.")
+	delayMs            = flag.Int("delay_ms", supermarket.LookupEnvInt("DELAY_MS", 1000), "If provided, delay in milliseconds between requests. This value will be randomized +/-50%. Can also be provided via 'DELAY_MS' env.")
+	verbose            = flag.Int("verbose", supermarket.LookupEnvInt("VERBOSE", 0), "Log verbosity level [0-4]. Can also be provided via 'VERBOSE' env.")
+	prometheusEndpoint = flag.String("prometheus_endpoint", supermarket.LookupEnv("PROMETHEUS_ENDPOINT", ""), "Prometheus Pushgateway endpoint (e.g., http://localhost:9091). Can also be provided via 'PROMETHEUS_ENDPOINT' env.")
+	prometheusJob      = flag.String("prometheus_job", supermarket.LookupEnv("PROMETHEUS_JOB", "supermarket"), "Prometheus job name for pushing metrics. Can also be provided via 'PROMETHEUS_JOB' env.")
 )
 
 func run(ctx context.Context) error {
@@ -213,9 +179,9 @@ func main() {
 	}
 
 	// Push metrics to Prometheus Pushgateway if configured.
-	if *prometheusPushGateway != "" {
-		logger.Infof("main: pushing metrics to %s...", *prometheusPushGateway)
-		if pushErr := metrics.PushMetrics(ctx, *prometheusPushGateway, *prometheusJobName); pushErr != nil {
+	if *prometheusEndpoint != "" {
+		logger.Infof("main: pushing metrics to %s...", *prometheusEndpoint)
+		if pushErr := metrics.PushMetrics(ctx, *prometheusEndpoint, *prometheusJob); pushErr != nil {
 			logger.Errorf("main: failed to push metrics: %v", pushErr)
 		}
 	}
