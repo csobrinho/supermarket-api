@@ -6,7 +6,7 @@ require (
 	github.com/google/logger v1.1.2
 	github.com/prometheus/client_golang v1.23.2
 	golang.org/x/exp v0.0.0-20260508232706-74f9aab9d74a
-	golang.org/x/net v0.53.0
+	golang.org/x/net v0.54.0
 	golang.org/x/oauth2 v0.36.0
 )
 
@@ -18,7 +18,7 @@ require (
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/text v0.36.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
 )
