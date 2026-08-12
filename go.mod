@@ -5,7 +5,7 @@ go 1.25.4
 require (
 	github.com/google/logger v1.1.2
 	github.com/prometheus/client_golang v1.24.1
-	golang.org/x/exp v0.0.0-20260810151157-a8b543ca52da
+	golang.org/x/exp v0.0.0-20260811152304-ee035b5b010f
 	golang.org/x/net v0.57.0
 	golang.org/x/oauth2 v0.36.0
 )
