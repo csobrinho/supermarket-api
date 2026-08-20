@@ -1,11 +1,11 @@
 module github.com/csobrinho/supermarket-api
 
-go 1.25.4
+go 1.26.0
 
 require (
 	github.com/google/logger v1.1.2
 	github.com/prometheus/client_golang v1.24.1
-	golang.org/x/exp v0.0.0-20260820122028-d6e0b57b1a69
+	golang.org/x/exp v0.0.0-20260820142414-ca536658362e
 	golang.org/x/net v0.58.0
 	golang.org/x/oauth2 v0.36.0
 )
