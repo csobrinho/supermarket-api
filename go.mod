@@ -6,7 +6,7 @@ require (
 	github.com/google/logger v1.1.2
 	github.com/prometheus/client_golang v1.25.0
 	golang.org/x/exp v0.0.0-20261007192929-f45ad48fbe92
-	golang.org/x/net v0.59.0
+	golang.org/x/net v0.60.0
 	golang.org/x/oauth2 v0.37.0
 )
 
